@@ -1,0 +1,72 @@
+Project: 1
+ 
+ABC Ltd. is working to collate various departments employee details who have joined in different locations across India, into a single file and create a master data for analysis of promotion to the higher band.
+
+1. Create a PS named EMPCDC with the following data.
+
+    A ps named EMPCDC is created with given content.
+
+2. Create a PS named EMPBDC with the following data.
+
+    Aps named EMPBDC is created with given content.
+
+3. Create a procedure called SRTEMP which takes the member names and sorts the data in ascending order of their NAME and stores the result in a PS named HISTDATA.
+    
+    After opening WPR109.MAR11.PROCPDS(SRTEMP) file:
+  
+    //STEP1 EXEC PGM=SORT
+    //SORTIN DD DSN=&A,DISP=OLD   
+    //SORTOUT DD DSN=WPR109.MAR11.HISTDATA,DISP=OLD  
+    //SYSIN DD *                                   
+            SORT FIELDS=(7,8,CH,A)                 
+    /*                                             
+    //SYSPRINT DD SYSOUT=*                         
+    //SYSOUT DD SYSOUT=* 
+
+4. Create a job to do the above needs, ensure that the step n should execute only if step n-1 is a sucess.
+    a. Step1: Invoke the procedure SRTEMP to sort the PS named EMPCDC based on the NAME and to store only the first 5 records in TEMP1 file.
+    b. Step2: Invoke the procedure SRTEMP to sort the PS named EMPBDC based on the NAME and to store in TEMP2 file.
+    c. Step3: Invoke the procedure to merge TEMP1 and TEMP2 in HISDATA.
+    d. Step4: Display 'JOB SUCESS' on the spool only if the above 3 steps are a success.
+    e. Step5: Display 'FAILURE-JOB NOT COMPLETED' if even any one of the step fails.
+ 
+    //WPR109A JOB WIPRO,SUSI,CLASS=A,NOTIFY=&SYSUID  
+    //M1 JCLLIB ORDER=WPR109.MAR11.PROCPDS          
+    //S1 EXEC PROC=SRTEMP,A=WPR109.MAR11.EMPCDC     
+    //S2 EXEC PGM=SORT                               
+    //SORTIN DD DSN=WPR109.MAR11.HISTDATA,DISP=OLD  
+    //SORTOUT DD DSN=WPR109.MAR11.TEMP1,DISP=OLD    
+    //SYSIN DD *                                     
+            SORT FIELDS=COPY,SKIPREC=0,STOPAFT=5     
+    /*                                               
+    //SYSPRINT DD SYSOUT=*                           
+    //SYSOUT DD SYSOUT=*                             
+    //S3 EXEC PROC=SRTEMP,A=WPR109.MAR11.EMPBDC     
+    //S4 EXEC PGM=IEBGENER,COND=(4,LT,S2)            
+    //SYSUT1 DD DSN=WPR109.MAR11.HISTDATA,DISP=OLD  
+    //SYSUT2 DD DSN=WPR109.MAR11.TEMP2,DISP=OLD     
+    //SYSIN DD DUMMY                                 
+    //SYSPRINT DD SYSOUT=*                           
+    //S5 EXEC PGM=SORT,COND=(4,LT,S4)                
+    //SORTIN1 DD DSN=WPR109.MAR11.TEMP1,DISP=OLD    
+    //SORTIN2 DD DSN=WPR109.MAR11.TEMP2,DISP=OLD    
+    //SORTOUT DD DSN=WPR109.MAR11.HISTDATA,DISP=OLD 
+    //SYSIN DD *                                     
+            MERGE FIELDS=(7,8,CH,A)                  
+    /*                                                                                         
+    //SYSPRINT DD SYSOUT=*                 
+    //SYSOUT DD SYSOUT=*                   
+    //S6 EXEC PGM=IEBGENER,COND=(4,LT,S5)  
+    //SYSUT1 DD *                          
+    JOB SUCCESS                            
+    /*                                     
+    //SYSUT2 DD SYSOUT=*                   
+    //SYSIN DD DUMMY                       
+    //SYSPRINT DD SYSOUT=*                 
+    //S7 EXEC PGM=IEBGENER,COND=(4,GT,S5)  
+    //SYSUT1 DD *                          
+    FAILURE-JOB NOT COMPLETED              
+    /*                                     
+    //SYSUT2 DD SYSOUT=*                   
+    //SYSIN DD DUMMY                       
+    //SYSPRINT DD SYSOUT=*                 
