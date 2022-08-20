@@ -1,0 +1,164 @@
+
+Project: 1
+
+Create a KSDS(StudKSDS) dataset with a CISZ size of 512, Record size 80 with key based on student id. Copy the content from 
+PS named Stud for the semester containing the following details into the KSDS.
+
+Student id     StudentName     Dept     Mark1     Mark2     Mark3     Total     Average     Grade
+101            XYZ             Comm     90        90        90        270       90          A
+102            ABC             Science  70        70        70        210       70          B
+102            ABC             Science  70        70        70        210       70          B
+
+Ensure that duplicates are removed when copying.
+Later a revised list was produced with additional students in a new named Stud1 which needs to be copied in the same KSDS
+(StudKSDS) with existing data.
+
+Student id     StudentName     Dept     Mark1     Mark2     Mark3     Total     Average     Grade
+101            XYZ             Comm     80        80        80        240       80          A
+106            IJK             Science  60        60        60        180       60          C
+102            ABC             Science  80        80        80        240       80          B
+
+Display the details of the entire list to verify the copied contents.
+In order to improve the searching it was decided to have another key(Dept) created along with the existing key Student id. 
+The created Alternative index cluster should be updated automatically whenever the base cluster is updated.
+Copy the information of primary key and alternative key values from the base cluster to alternative index cluster.
+The organization wants to create a copy of the KSDS dataset information and has decided to create an ESDS(StudESDS) using 
+IEFBR14 and copy the contents from (StudKSDS) to (StudESDS).
+To ensure further secure of the data the organization wants to take a backup of the StudKSDS named as KSDSBKUP. While doing
+this the input file should be made available along with the backup copy.
+
+    //WPR109A JOB WIPRO,SUSI,CLASS=A,NOTIFY=&SYSUID
+    //STEP1 EXEC PGM=IDCAMS
+    //SYSIN DD *
+              DEFINE CLUSTER(                        -
+                      NAME(WPR109.MAR11.STUDKSDS)   -
+                      INDEXED                        -
+                      KEYS(3,0)                      -
+                      RECORDSIZE(80,80)              -
+                      CISZ(512)                      -
+                      CYL(1,1)                       -
+                   )
+    /*
+    //SYSPRINT DD SYSOUT=*
+
+  After creating STUDKSDS file created PS file named STUD and added the given values 
+
+    //WPR109S JOB WIPRO,SUSI,CLASS=A,NOTIFY=&SYSUID
+    //STEP1 EXEC PGM=SORT                          
+    //SORTIN DD DSN=WPR109.MAR11.STUD,DISP=OLD   
+    //SORTOUT DD DSN=WPR109.MAR11.STUD,DISP=OLD  
+    //SYSIN DD *                                   
+            SORT FIELDS=(1,3,CH,A) 
+            SUM FIELDS=NONE                
+    /*                                             
+    //SYSPRINT DD SYSOUT=*                         
+    //SYSOUT DD SYSOUT=*  
+
+  After sorting the values in STUD file and removing duplicates 
+
+    //WPR109A JOB WIPRO,SUSI,CLASS=A,NOTIFY=&SYSUID
+    //STEP1 EXEC PGM=IDCAMS
+    //DD1 DD DSN=WPR109.MAR11.STUD,DISP=OLD
+    //DD2 DD DSN=WPR109.MAR11.STUDKSDS,DISP=OLD
+    //SYSIN DD *
+           REPRO INFILE(DD1) OUTFILE(DD2)
+    /*
+    //SYSPRINT DD SYSOUT=*
+
+  After copying from STUD to STUDKSDS created PS file named STUD1 and added the given values 
+
+    //WPR109S JOB WIPRO,SUSI,CLASS=A,NOTIFY=&SYSUID 
+    //STEP1 EXEC PGM=SORT                           
+    //SORTIN DD DSN=WPR109.MAR11.STUD1,DISP=OLD    
+    //SORTOUT DD DSN=WPR109.MAR11.STUD1,DISP=OLD   
+    //SYSIN DD *                                    
+            SORT FIELDS=(1,3,CH,A)                  
+    /*                                              
+    //SYSPRINT DD SYSOUT=*                          
+    //SYSOUT DD SYSOUT=*    
+
+  After sorting the values in STUD1 file                        
+
+    //WPR109A JOB WIPRO,SUSI,CLASS=A,NOTIFY=&SYSUID
+    //STEP1 EXEC PGM=IDCAMS
+    //DD1 DD DSN=WPR109.MAR11.STUD1,DISP=OLD
+    //DD2 DD DSN=WPR109.MAR11.STUDKSDS,DISP=OLD
+    //SYSIN DD *
+           REPRO INFILE(DD1) OUTFILE(DD2) REPLACE
+    /*
+    //SYSPRINT DD SYSOUT=*
+
+  Displayed the content using command PRINT CH IDS(/) and verified the copied content
+
+    //WPR109A JOB WIPRO,SUSI,CLASS=A,NOTIFY=&SYSUID
+    //STEP1 EXEC PGM=IDCAMS
+    //SYSIN DD *
+              DEFINE AIX(                            -
+                      NAME(WPR109.MAR11.STUDAIX)    -
+                      RELATE(WPR109.MAR11.STUDKSDS) -
+                      KEYS(7,8)                      -
+                      RECORDSIZE(80,80)              -
+                      CYL(1,1)                       -
+                   )
+    /*
+    //SYSPRINT DD SYSOUT=*
+
+  After creating alternative index build is done using below code
+
+    //WPR109A JOB WIPRO,SUSI,CLASS=A,NOTIFY=&SYSUID
+    //STEP1 EXEC PGM=IDCAMS                        
+    //DD1 DD DSN=WPR109.MAR11.STUDKSDS,DISP=OLD    
+    //DD2 DD DSN=WPR109.MAR11.STUDAIX,DISP=OLD     
+    //SYSIN DD *                                   
+          BLDINDEX INFILE(DD1) OUTFILE(DD2)        
+    /*                                             
+    //SYSPRINT DD SYSOUT=*  
+
+  Create ESDS file using below code    
+
+    //WPR109A JOB WIPRO,SUSI,CLASS=A,NOTIFY=&SYSUID            
+    //STEP1 EXEC PGM=IEFBR14                                   
+    //DD1 DD DSN=WPR109.MAR11.STUDESDS,DISP=(NEW,CATLG,DELETE),
+    //         LRECL=80,RECORG=ES,           
+    //         SPACE=(CYL,(5,5))                               
+    /*                                                         
+    //SYSPRINT DD SYSOUT=*                     
+
+  Copy from KSDS to ESDS using below code  
+
+    //WPR109A JOB WIPRO,SUSI,CLASS=A,NOTIFY=&SYSUID
+    //STEP1 EXEC PGM=IDCAMS                        
+    //DD1 DD DSN=WPR109.MAR11.STUDKSDS,DISP=OLD   
+    //DD2 DD DSN=WPR109.MAR11.STUDESDS,DISP=OLD   
+    //SYSIN DD *                                   
+           REPRO INFILE(DD1) OUTFILE(DD2)          
+    /*                                             
+    //SYSPRINT DD SYSOUT=*  
+
+  Create KSDSBKUP file using below code         
+
+    //WPR109A JOB WIPRO,SUSI,CLASS=A,NOTIFY=&SYSUID
+    //STEP1 EXEC PGM=IDCAMS
+    //SYSIN DD *
+              DEFINE CLUSTER(                        -
+                      NAME(WPR109.MAR11.KSDSBKUP)   -
+                      INDEXED                        -
+                      KEYS(3,0)                      -
+                      RECORDSIZE(80,80)              -
+                      CISZ(512)                      -
+                      CYL(1,1)                       -
+                   )
+    /*
+    //SYSPRINT DD SYSOUT=*
+
+  Copy from STUDKSDS to KSDSBKUP using below code  
+
+    //WPR109A JOB WIPRO,SUSI,CLASS=A,NOTIFY=&SYSUID
+    //STEP1 EXEC PGM=IDCAMS                        
+    //DD1 DD DSN=WPR109.MAR11.STUDKSDS,DISP=OLD   
+    //DD2 DD DSN=WPR109.MAR11.KSDSBKUP,DISP=OLD   
+    //SYSIN DD *                                   
+           REPRO INFILE(DD1) OUTFILE(DD2)          
+    /*                                             
+    //SYSPRINT DD SYSOUT=*  
+              

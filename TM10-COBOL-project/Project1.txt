@@ -1,0 +1,118 @@
+
+Project: 1
+
+As a part of project team, you are required to create a Student report prototype using COBOL program.
+Create a report to represent the student record with the below given information
+  1. Student Id
+  2. Student Name
+  3. Mark1
+  4. Mark2
+  5. Mark3
+  6. Total
+  7. Average
+  8. Grade
+Program is expected to accept the number of students(StdNo) as input for which we would calculate and generate report.
+For ex: if (StdNo=5) we need to calculate Total, Average and Grade for all the five and display in the format of the report
+as below.
+**********************************************************************************
+                       Student Record
+**********************************************************************************
+Roll NO       Name        M1       M2       M3        Total      Avg         Grade
+
+**********************************************************************************
+
+Note:
+inputs:StdNo->Representing number of students
+Now accept the following information for every student.
+     Student Id
+     Student Name
+     Mark1
+     Mark2
+     Mark3
+From the collected data calculate the total,average and grade.Average calculated should be with decimal places of two.
+
+  IDENTIFICATION DIVISION.
+  PROGRAM-ID. PROG.
+  DATA DIVISION.
+  WORKING-STORAGE SECTION.
+  01 I PIC 9(2).
+  01 STDNO PIC 9(2).
+  01 G1.
+         02 STUID PIC 9(2).
+         02 FILLER PIC X.
+         02 STUNAM PIC X(9).
+         02 FILLER PIC X.
+         02 SUB1 PIC 9(2).
+         02 FILLER PIC X.
+         02 SUB2 PIC 9(2).
+         02 FILLER PIC X.
+         02 SUB3 PIC 9(2).
+         02 FILLER PIC X(59).
+  01 G2.
+         02 STUID1 PIC 9(2).
+         02 FILLER PIC X(7).
+         02 STUNAM1 PIC X(9).
+         02 SUB11 PIC 9(2).
+         02 FILLER PIC X(7).
+         02 SUB21 PIC 9(2).
+         02 FILLER PIC X(7).
+         02 SUB31 PIC 9(2).
+         02 FILLER PIC X(7).
+         02 TOT1 PIC 9(3).
+         02 FILLER PIC X(6).
+         02 AVG1 PIC 9(2).9(2).
+         02 FILLER PIC X(4).
+         02 GRADE1 PIC A(1).
+         02 FILLER PIC X(16). 
+  01 ASTRI.
+         02 AST PIC X VALUE '*' OCCURS 70 TIMES.
+         02 FILLER PIC X(10).
+  01 HEA.
+         02 ROLHEA PIC X(9) VALUE 'ROLL NO'.
+         02 STUHEA PIC X(9) VALUE 'NAME'.
+         02 MAR1HEA PIC X(9) VALUE 'M1'.
+         02 MAR2HEA PIC X(9) VALUE 'M2'.
+         02 MAR3HEA PIC X(9) VALUE 'M3'.
+         02 TOTHEA PIC X(9) VALUE 'TOTAL'.
+         02 AVGHEA PIC X(9) VALUE 'AVG'.
+         02 GRAHEA PIC X(9) VALUE 'GRADE'. 
+         02 FILLER PIC X(8).
+  77 STULAB PIC X(14) VALUE 'STUDENT RECORD'.
+  77 AVG PIC 9(2)V9(2).
+  77 TOT PIC 9(3).
+  77 GRADE PIC A(1).
+  PROCEDURE DIVISION.
+  MAIN-PARA.
+         ACCEPT STDNO.
+         DISPLAY ASTRI.
+         DISPLAY STULAB.
+         DISPLAY ASTRI.
+         DISPLAY HEA.
+         PERFORM VARYING I FROM 1 BY 1 UNTIL I > STDNO
+         ACCEPT G1
+         COMPUTE TOT = ( SUB1 + SUB2 + SUB3 )
+         COMPUTE AVG = TOT / 3
+         EVALUATE AVG
+             WHEN 90 THRU 100
+                   MOVE 'O' TO GRADE
+             WHEN 80 THRU 89
+                   MOVE 'A' TO GRADE
+             WHEN 60 THRU 79
+                   MOVE 'B' TO GRADE
+             WHEN 50 THRU 59
+                   MOVE 'C' TO GRADE
+             WHEN OTHER
+                   MOVE 'D' TO GRADE
+         END-EVALUATE
+         MOVE STUID TO STUID1
+         MOVE STUNAM TO STUNAM1
+         MOVE SUB1 TO SUB11
+         MOVE SUB2 TO SUB21
+         MOVE SUB3 TO SUB31
+         MOVE TOT TO TOT1
+         MOVE AVG TO AVG1
+         MOVE GRADE TO GRADE1
+         DISPLAY G2
+         END-PERFORM.
+         DISPLAY ASTRI.
+         STOP RUN.
