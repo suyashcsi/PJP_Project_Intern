@@ -1,0 +1,177 @@
+
+Project: 1
+
+As a part of project team, you are required to create a COBOL application that would take in a PS file as its input and update
+the KSDS master file based on the entries given in the PS file.
+Employees Master records are maintained in a KSDS dataset called EMASTER which records the following fields.
+ 
+    EMPID     ENAME     DEPT     SALARY     PH-NO
+
+Organization maintains a PS dataset called as WorkFile which maintains their daily request of recording new employee joining, 
+change of personal information, department or salary change from HR team.
+
+    Use the PS file as input file which is given with the following details.
+    EMPID     ENAME     DEPT     SALARY     PH-NO      STATUS     REMARKS
+    10001     XYZ       SALES    50000      044-123456   I
+    10023     ABC       ACCT     50000      044-123456   U
+    10012     PQR       FINS     50000      044-123456   D
+    (Hint: minimum 15 records has to be present)
+
+Write a COBOL program to read records from the above given PS dataset and verify the status.
+if Status is 'I' then insert details from EMPID to PH-NO into the EMASTER dataset and update the PS file status to 'F'
+indicating finished for sucess or 'P' indicating as Pending for unsuccess and give the remarks.
+if Status is 'U' then modify that record in KSDS with the given values in PS file and change the PS file status to 'F'
+indicating finished for sucess or 'P' indicating as Pending for unsuccess and give the remarks.
+if Status is 'D' then delete that record from KSDS and change the PS file status to 'F' indicating finished for sucess or 
+'P' indicating as Pending for unsuccess and give the remarks.
+
+Remarks should be
+1. 'Success' for all successful operations.
+2. Appropriate error message based on the returned file status code.
+
+    Hint: After the execution of above program PS will be as below
+    EMPID     ENAME     DEPT     SALARY     PH-NO      STATUS     REMARKS
+    10001     XYZ       SALES    50000      044-123456   P        Records already present
+    10023     ABC       ACCT     50000      044-123456   P        Records not found
+    10012     PQR       FINS     50000      044-123456   F        Success
+
+  Create a KSDS named EMASTER using below code:
+
+    //WPR109A JOB WIPRO,SUSI,CLASS=A,NOTIFY=&SYSUID      
+    //STEP1 EXEC PGM=IDCAMS                              
+    //SYSIN DD *                                         
+              DEFINE CLUSTER(                        -   
+                      NAME(WPR109.MAR11.EMASTER)    -   
+                      INDEXED                        -   
+                      KEYS(5,0)                      -   
+                      RECORDSIZE(80,80)              -   
+                      CYL(1,1)                       -   
+                   )                                     
+    /*                                                   
+    //SYSPRINT DD SYSOUT=*     
+
+  Insert values into ksds using below code:
+
+    //WPR109A JOB WIPRO,SUSI,CLASS=A,NOTIFY=&SYSUID   
+    //STEP1 EXEC PGM=IDCAMS                           
+    //DD1 DD DSN=WPR109.MAR11.PS3,DISP=OLD           
+    //DD2 DD DSN=WPR109.MAR11.EMASTER,DISP=OLD       
+    //SYSIN DD *                                      
+           REPRO INFILE(DD1) OUTFILE(DD2)             
+    /*                                                
+    //SYSPRINT DD SYSOUT=*                            
+
+  Cobol code for given question is given below:
+
+  IDENTIFICATION DIVISION.                      
+  PROGRAM-ID. PROG.                             
+  ENVIRONMENT DIVISION.                         
+  INPUT-OUTPUT SECTION.                         
+  FILE-CONTROL.                                 
+       SELECT OUTFILE ASSIGN TO DD2             
+       ORGANIZATION IS INDEXED                  
+       ACCESS MODE IS RANDOM                    
+       RECORD KEY IS WS-KEY                     
+       FILE STATUS IS WS-FS1.                   
+       SELECT INFILE ASSIGN TO DD1.             
+  DATA DIVISION.                                
+  FILE SECTION.                                 
+  COPY CPYEMP.                                  
+  WORKING-STORAGE SECTION.                      
+  77 WS-FS1 PIC 9(2).                           
+  77 WS-FLAG PIC X(1) VALUE 'Y'.                
+  PROCEDURE DIVISION.                           
+  MAIN-PARA.                                    
+        PERFORM OPEN-PARA.                      
+        PERFORM WRITE-PARA UNTIL WS-FLAG = 'N'. 
+        PERFORM CLOSE-PARA.                     
+        STOP RUN.                               
+  OPEN-PARA.                                                                     
+        OPEN I-O INFILE.                          
+        OPEN I-O OUTFILE.                         
+  WRITE-PARA.                                     
+        READ INFILE                               
+        AT END                                    
+        DISPLAY "END OF FILE"                     
+        MOVE 'N' TO WS-FLAG                       
+        NOT AT END                                
+        IF STS = 'I'                              
+        MOVE EMPID TO WS-KEY                      
+        READ OUTFILE                              
+        INVALID KEY                               
+        MOVE EMPNAME TO I-EMPNAME                 
+        MOVE DEPT TO I-DEPT                       
+        MOVE SAL TO I-SAL                         
+        MOVE PHNO TO I-PHNO                       
+        WRITE OUT-REC                             
+        MOVE 'F' TO STS                           
+        MOVE 'SUCCESS' TO RMARK                   
+        NOT INVALID KEY                           
+        MOVE 'P' TO STS                           
+        MOVE 'RECORDS ALREADY PRESENT' TO RMARK   
+        END-READ                                  
+        END-IF                                    
+        IF STS = 'U'                                                            
+        MOVE EMPID TO WS-KEY                  
+        READ OUTFILE                          
+        INVALID KEY                           
+        MOVE 'P' TO STS                       
+        MOVE 'RECORDS NOT FOUND' TO RMARK     
+        NOT INVALID KEY                       
+        MOVE EMPNAME TO I-EMPNAME             
+        MOVE DEPT TO I-DEPT                   
+        MOVE SAL TO I-SAL                     
+        MOVE PHNO TO I-PHNO                   
+        REWRITE OUT-REC                       
+        MOVE 'F' TO STS                       
+        MOVE 'SUCCESS' TO RMARK               
+        END-READ                              
+        END-IF                                
+        IF STS = 'D'                          
+        MOVE EMPID TO WS-KEY                  
+        READ OUTFILE                          
+        INVALID KEY                           
+        MOVE 'P' TO STS                       
+        MOVE 'RECORDS NOT FOUND' TO RMARK     
+        NOT INVALID KEY                       
+        DELETE OUTFILE                        
+        MOVE 'F' TO STS                       
+        MOVE 'SUCCESS' TO RMARK               
+        END-READ          
+        END-IF            
+        REWRITE IN-REC    
+        END-READ.         
+  CLOSE-PARA.             
+        CLOSE INFILE.     
+        CLOSE OUTFILE.     
+
+  In copy book(CPYEMP):
+
+  FD OUTFILE.              
+  01 OUT-REC.              
+    02 WS-KEY PIC X(5).   
+    02 FILLER PIC X.    
+    02 I-EMPNAME PIC X(3). 
+    02 FILLER PIC X.    
+    02 I-DEPT PIC X(5). 
+    02 FILLER PIC X.    
+    02 I-SAL PIC 9(5). 
+    02 FILLER PIC X.    
+    02 I-PHNO PIC X(12). 
+    02 FILLER PIC X(46).       
+  FD INFILE.              
+  01 IN-REC.              
+    02 EMPID PIC X(5).   
+    02 FILLER PIC X.    
+    02 EMPNAME PIC X(3). 
+    02 FILLER PIC X.    
+    02 DEPT PIC X(5). 
+    02 FILLER PIC X.    
+    02 SAL PIC 9(5). 
+    02 FILLER PIC X.    
+    02 PHNO PIC X(12). 
+    02 FILLER PIC X.      
+    02 STS PIC X.   
+    02 FILLER PIC X.   
+    02 RMARK PIC X(23).   
+    02 FILLER PIC X(20).
