@@ -1,0 +1,303 @@
+
+Project: 1
+
+As a part of project team, you are required to create a Student report prototype using COBOL program.
+Client being satisfied with the previously developed app has come back asking for the client front end. That is to have an
+online transaction application. As a part of the project team, you are required to use the EMPMaster table in DB2 as back
+end and create a COBOL CICS Application with following modules.
+
+On starting the application transaction it should open the main menu as below
+
+             Welcome to Employee Manage System
+
+   F1 -> Add New Employee       F2 -> View All Employees
+
+                                      F5 -> EXIT
+
+On Pressing the F1 key it should navigate to the Add Employee Map
+
+    New Employee
+
+    EMP ID:      ------
+    E NAME:      ------
+    DEPT:        ------
+    SALARY:      ------
+    PHONE NO:    ------
+
+    F1 -> Add New Employee
+
+After entering the required fields press F1. Data entered by the user has to be uploaded in the database.
+On pressing F2 Create a map to display the top 5 highly paid employees records on the screen.
+
+    TOP 5 Employee Record
+    --------------------------------------------------
+    EMP ID:   E NAME:   DEPT:   SALARY:   PHONE NO:
+    --------------------------------------------------
+    10001     AAAAAAA   SALES   302020    987654456
+    10002     BBBBAAA   SALES   367020    798654456
+    
+    --------------------------------------------------
+    F1 -> Go Back
+
+Code should follow Pseudo Conversation technique.
+ 
+CODE1:
+
+  IDENTIFICATION DIVISION.       
+  PROGRAM-ID. PGM1.            
+  DATA DIVISION.                 
+  WORKING-STORAGE SECTION.      
+       COPY EPEMAP1. 
+       COPY DFHAID. 
+  77 WS-CA PIC X(3).
+  LINKAGE SECTION.
+  77 LK-CA PIC X(3).
+  PROCEDURE DIVISION.            
+  MAIN-PARA.                     
+     MOVE LOW-VALUES TO EMPLO.
+     IF EIBCALEN = 0           
+          PERFORM SEND-PARA  
+          PSEU-PARA  
+     ELSE  
+          MOVE LK-CA TO WS-CA.
+          IF WS-CA = HI1
+               EXEC CICS
+                  XCTL PROGRAM('PGM2')
+                  COMMAREA(WS-CA)
+                  LENGTH(3)
+               END-EXEC
+          END-IF
+          IF WS-CA = HI2  
+               EXEC CICS
+                  XCTL PROGRAM('PGM3')
+                  COMMAREA(WS-CA)
+                  LENGTH(3)
+               END-EXEC 
+          END-IF
+          IF WS-CA = HAI                
+               PERFORM RECEIVE-PARA 
+               PERFORM COMP-PARA   
+          END-IF 
+     END-IF.                            
+     STOP RUN.   
+  COMP-PARA.
+     EVALUATE TRUE                                
+     WHEN EIBAID = DFHPF1                         
+          MOVE 'HI1' TO WS-CA       
+          EXEC CICS                  
+               RETURN                
+               TRANSID('EM02')       
+               COMMAREA(WS-CA)       
+          END-EXEC                       
+     WHEN EIBAID = DFHPF2                         
+          MOVE 'HI2' TO WS-CA       
+          EXEC CICS                  
+               RETURN                
+               TRANSID('EM03')       
+               COMMAREA(WS-CA)       
+          END-EXEC                      
+     WHEN EIBAID = DFHPF5                         
+          PERFORM EXIT-PARA                          
+     END-EVALUATE. 
+  SEND-PARA.                            
+     EXEC CICS                  
+         SEND MAP('EMPL')      
+              MAPSET('EPEMAP1')  
+              FROM(EMPLO)      
+              ERASE             
+     END-EXEC. 
+  PSEU-PARA.                 
+     MOVE 'HAI' TO WS-CA.       
+     EXEC CICS                  
+          RETURN                
+          TRANSID('EM01')       
+          COMMAREA(WS-CA)       
+     END-EXEC.   
+  RECEIVE-PARA.                   
+     EXEC CICS                  
+        RECEIVE MAP('EMPL')    
+                MAPSET('EPEMAP1')
+                INTO(EMPLI)    
+     END-EXEC.
+  EXIT-PARA.                                            
+     EXEC CICS                     
+         RETURN                    
+     END-EXEC.  
+ 
+CODE2:       
+
+  IDENTIFICATION DIVISION.       
+  PROGRAM-ID. PGM2.            
+  DATA DIVISION.                 
+  WORKING-STORAGE SECTION.       
+       COPY EPEMAP2. 
+       COPY DFHAID.                        
+       EXEC SQL                
+           INCLUDE SQLCA       
+       END-EXEC.               
+  01 EMP-REC.                       
+       02 EMPNO PIC S9(3) COMP.        
+       02 EMPNAME PIC X(6).            
+       02 PHONE PIC S9(10)V COMP-3.   
+       02 EMPAGE PIC S9(2) COMP.       
+       02 JOIN PIC X(10).              
+       02 EMPID PIC X(6).                
+       02 DEPTID PIC S9(2) COMP.                          
+       02 SALRY PIC S9(5)V COMP-3.                    
+       02 COMSION PIC S9(5)V COMP-3.                            
+  77 WS-CA PIC X(3).             
+  77 WS-MSG PIC X(10).           
+  PROCEDURE DIVISION.            
+  MAIN-PARA.                     
+     MOVE LOW-VALUES TO EMPLO.                     
+     PERFORM RECEIVE-PARA 
+     PERFORM COMP-PARA  
+     PERFORM SEND-PARA                      
+     PERFORM EXIT-PARA.         
+     STOP RUN.                  
+  SEND-PARA.                            
+     EXEC CICS                  
+         SEND MAP('EMPL')      
+              MAPSET('EPEMAP2')  
+              FROM(EMPLO)      
+              ERASE             
+     END-EXEC.                  
+  RECEIVE-PARA.                   
+     EXEC CICS                  
+        RECEIVE MAP('EMPL')    
+                MAPSET('EPEMAP2')
+                INTO(EMPLI)    
+     END-EXEC.                                    
+  COMP-PARA.  
+     IF EIBAID = DFHPF1                                                                                      
+     MOVE EMNUI TO EMPNO                          
+     MOVE EMNAI TO EMPNAME 
+     MOVE PHNUI TO PHONE                          
+     MOVE AGEI TO EMPAGE 
+     MOVE HIREI TO JOIN     
+     MOVE JOBPI TO EMPID 
+     MOVE DEPTI TO DEPTID                         
+     MOVE SALRI TO SALRY 
+     MOVE COMNI TO COMSION                  
+     EXEC SQL                                      
+          INSERT INTO EMPLOYEES_TB                 
+          (EMPLOYEE_NO,EMPLOYEE_NAME,PHONE_NUMBER, 
+           AGE,HIREDATE,JOB_PROFILE,DEPARTMENT_ID, 
+           SALARY,COMMISSION)                      
+           VALUES                                  
+          (:EMPNO,:EMPNAME,:PHONE,:EMPAGE,:JOIN,   
+           :EMPID,:DEPTID,:SALRY,:COMSION)              
+     END-EXEC.                                    
+     IF SQLCODE = 0                               
+           MOVE 'SUCCESS' TO MSGO   
+     ELSE                                          
+           MOVE SQLCODE TO MSGO                             
+     END-IF
+     END-IF.                                                                   
+  EXIT-PARA.                                            
+     EXEC CICS                     
+         RETURN                    
+     END-EXEC.       
+
+CODE3:
+
+  IDENTIFICATION DIVISION.       
+  PROGRAM-ID. PGM3.            
+  DATA DIVISION.                 
+  WORKING-STORAGE SECTION.       
+       COPY EPEMAP3.                        
+       EXEC SQL                
+           INCLUDE SQLCA       
+       END-EXEC.   
+       EXEC SQL
+              DECLARE C1 CURSOR
+              FOR
+              SELECT EMPLOYEE_NO,EMPLOYEE_NAME,PHONE_NUMBER,
+              AGE,HIREDATE,JOB_PROFILE,DEPARTMENT_ID,      
+              SALARY,COMMISSION FROM EMPLOYEES_TB ORDER BY
+              SALARY DESC
+       END-EXEC.            
+  01 EMP-REC.                       
+       02 EMPNO PIC S9(3) COMP.        
+       02 EMPNAME PIC X(6).            
+       02 PHONE PIC S9(10)V COMP-3.   
+       02 EMPAGE PIC S9(2) COMP.       
+       02 JOIN PIC X(10).              
+       02 EMPID PIC X(6).                
+       02 DEPTID PIC S9(2) COMP.                          
+       02 SALRY PIC S9(5)V COMP-3.                    
+       02 COMSION PIC S9(5)V COMP-3.                            
+  77 WS-CA PIC X(3). 
+  77 J PIC 9.            
+  77 WS-MSG PIC X(10).
+  LINKAGE SECTION.
+  77 LK-CA PIC X(3).           
+  PROCEDURE DIVISION.            
+  MAIN-PARA.       
+     MOVE LK-CA TO WS-CA.
+     IF WS-CA = HAI
+           EXEC CICS
+              XCTL PROGRAM('PGM1')
+              COMMAREA(WS-CA)
+              LENGTH(3)
+           END-EXEC
+     END-IF              
+     MOVE LOW-VALUES TO EMPLO.                       
+     PERFORM COMP-PARA  
+     PERFORM SEND-PARA 
+     PERFORM RECEIVE-PARA  
+     PERFORM COMP2-PARA                    
+     PERFORM EXIT-PARA.         
+     STOP RUN.                  
+  SEND-PARA.                            
+     EXEC CICS                  
+         SEND MAP('EMPL')      
+              MAPSET('EPEMAP3')  
+              FROM(EMPLO)      
+              ERASE             
+     END-EXEC. 
+  RECEIVE-PARA.                   
+     EXEC CICS                  
+        RECEIVE MAP('EMPL')    
+                MAPSET('EPEMAP3')
+                INTO(EMPLI)    
+     END-EXEC. 
+  COMP2-PARA. 
+     IF EIBAID = DFHPF1                      
+     MOVE 'HAI' TO WS-CA.       
+     EXEC CICS                  
+          RETURN                
+          TRANSID('EM01')       
+          COMMAREA(WS-CA)       
+     END-EXEC  
+     END-IF.                                                   
+  COMP-PARA.     
+     EXEC SQL
+          OPEN C1
+     END-EXEC.   
+     PERFORM VARYING J FROM 5 BY -1 UNTIL J < 1             
+     EXEC SQL                                           
+        FETCH C1                            
+        INTO                                          
+          :EMPNO,:EMPNAME,:PHONE,
+          :EMPAGE,:JOIN,:EMPID,
+          :DEPTID,:SALRY,:COMSION                                  
+     END-EXEC 
+     MOVE EMPNO TO EMNUO(J)                         
+     MOVE EMPNAME TO EMNAO(J) 
+     MOVE PHONE TO PHNUO(J)                          
+     MOVE EMPAGE TO AGEO(J)
+     MOVE JOIN TO HIREO(J)     
+     MOVE EMPID TO JOBPO(J) 
+     MOVE DEPTID TO DEPTO(J)                          
+     MOVE SALRY TO SALRO(J)  
+     MOVE COMSION TO COMNO(J)   
+     END-PERFORM.                                                               
+  EXIT-PARA. 
+     EXEC SQL
+         CLOSE C1
+     END-EXEC.                                            
+     EXEC CICS                     
+         RETURN                    
+     END-EXEC.  
+
